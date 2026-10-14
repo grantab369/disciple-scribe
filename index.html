@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Disciple Scribe" />
+  <meta name="theme-color" content="#0c0a09" />
+  <title>Disciple Scribe — Bible Notes, Sermons, Hymns & Prayer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0c0a09;
+      --card-dark: #1c1917;
+      --ink-light: #f5f5f4;
+      --accent-amber: #d97706;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--ink-light);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: none;
+    }
+    .font-serif-study {
+      font-family: 'Crimson Pro', Georgia, serif;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes pulse-rec {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.15); }
+    }
+    .rec-dot { animation: pulse-rec 1.2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col select-none bg-stone-950 text-stone-100">
+
+  <div class="w-full max-w-md mx-auto min-h-screen flex flex-col bg-stone-950 shadow-2xl relative pb-24 border-x border-stone-900">
+
+    <!-- Top Dark Sanctuary Header -->
+    <header class="sticky top-0 z-30 bg-stone-950/95 backdrop-blur-md border-b border-stone-800 px-4 pt-3 pb-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-600 text-stone-950 flex items-center justify-center shadow-sm">
+            <i data-lucide="feather" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h1 class="font-serif-study text-xl font-bold tracking-tight text-stone-100 leading-none">Disciple Scribe</h1>
+            <p id="storageStatus" class="text-[11px] text-stone-400 mt-0.5">Saved on your phone</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button onclick="openBackupModal()" title="Backup & Restore" class="p-2 rounded-xl bg-stone-900 text-stone-300 border border-stone-800 hover:bg-stone-800 active:scale-95 transition">
+            <i data-lucide="hard-drive-download" class="w-4 h-4"></i>
+          </button>
+          <button onclick="openEditor()" class="flex items-center gap-1 px-3 py-2 rounded-xl bg-amber-600 text-stone-950 text-xs font-bold shadow-sm active:scale-95 transition">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>New Entry</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="relative mt-2.5">
+        <i data-lucide="search" class="w-4 h-4 text-stone-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+        <input
+          id="searchInput"
+          type="text"
+          oninput="handleSearch(this.value)"
+          placeholder="Search notes, verses (e.g. Mark 1:1), hymns, questions..."
+          class="w-full pl-9 pr-8 py-2 rounded-xl bg-stone-900 border border-stone-800 text-xs text-stone-100 placeholder-stone-500 focus:outline-none focus:border-amber-500"
+        />
+        <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div id="categoryFilterBar" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar mt-2.5 pb-0.5"></div>
+    </header>
+
+    <!-- Active Book Filter Banner -->
+    <div id="bookFilterBanner" class="hidden bg-stone-900 border-b border-stone-800 px-4 py-2 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-xs font-medium text-amber-400">
+        <i data-lucide="bookmark" class="w-3.5 h-3.5"></i>
+        <span>Book: <strong id="activeBookName"></strong></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="newNoteForActiveBook()" class="text-[11px] font-bold bg-amber-600 text-stone-950 px-2.5 py-1 rounded-lg">+ Note in Book</button>
+        <button onclick="setBookFilter(null)" class="text-xs text-stone-400 hover:text-stone-200 p-1">Clear</button>
+      </div>
+    </div>
+
+    <!-- Main View Content -->
+    <main id="mainContent" class="flex-1 px-4 pt-3 space-y-3"></main>
+
+    <!-- Bottom Mobile Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-30 max-w-md mx-auto bg-stone-950/95 backdrop-blur-md border-t border-stone-800 px-2 py-1.5 flex items-center justify-around">
+      <button onclick="switchTab('feed')" id="tab-feed" class="flex flex-col items-center py-1 px-2.5 rounded-xl text-amber-500 font-semibold">
+        <i data-lucide="layers" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">All Notes</span>
+      </button>
+      <button onclick="switchTab('scripture')" id="tab-scripture" class="flex flex-col items-center py-1 px-2.5 rounded-xl text-stone-400">
+        <i data-lucide="book-marked" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">Scripture</span>
+      </button>
+      <button onclick="openEditor()" class="w-11 h-11 -mt-4 rounded-2xl bg-amber-600 text-stone-950 flex items-center justify-center shadow-lg active:scale-95 transition">
+        <i data-lucide="plus" class="w-6 h-6"></i>
+      </button>
+      <button onclick="switchTab('questions')" id="tab-questions" class="flex flex-col items-center py-1 px-2.5 rounded-xl text-stone-400">
+        <i data-lucide="help-circle" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">Questions</span>
+      </button>
+      <button onclick="switchTab('hymns')" id="tab-hymns" class="flex flex-col items-center py-1 px-2.5 rounded-xl text-stone-400">
+        <i data-lucide="music" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">Hymns</span>
+      </button>
+      <button onclick="switchTab('prayers')" id="tab-prayers" class="flex flex-col items-center py-1 px-2.5 rounded-xl text-stone-400">
+        <i data-lucide="heart-handshake" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">Prayers</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- FULL-SCREEN NOTE EDITOR MODAL -->
+  <div id="editorModal" class="fixed inset-0 z-40 hidden bg-stone-950 flex-col max-w-md mx-auto overflow-hidden">
+    <div class="px-4 py-3 border-b border-stone-800 flex items-center justify-between bg-stone-950">
+      <button onclick="closeEditor()" class="flex items-center gap-1 text-xs font-medium text-stone-400 py-1.5 px-2 rounded-lg hover:bg-stone-900">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span>Cancel</span>
+      </button>
+      <span id="editorModeTitle" class="text-xs font-semibold uppercase tracking-wider text-stone-400">New Study Entry</span>
+      <button onclick="saveCurrentNote()" class="px-4 py-1.5 rounded-xl bg-amber-600 text-stone-950 text-xs font-bold shadow-sm active:scale-95">
+        Save
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-4 py-3 space-y-4 pb-28">
+      <div>
+        <label class="block text-[11px] font-semibold uppercase tracking-wider text-stone-400 mb-1.5">Entry Category</label>
+        <div id="editorCategoryPills" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1"></div>
+      </div>
+
+      <div class="space-y-2.5">
+        <input id="noteTitle" type="text" placeholder="Title (e.g., Sunday Sermon, Morning Prayer...)" class="w-full font-serif-study text-xl font-bold bg-transparent border-b border-stone-800 pb-2 text-stone-100 placeholder-stone-500 focus:outline-none focus:border-amber-500" />
+        <div id="sermonMetaRow" class="hidden grid grid-cols-2 gap-2">
+          <input id="noteSpeaker" type="text" placeholder="Speaker / Pastor" class="px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-xs text-stone-100 placeholder-stone-500 focus:outline-none" />
+          <input id="noteSeries" type="text" placeholder="Series / Location" class="px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-xs text-stone-100 placeholder-stone-500 focus:outline-none" />
+        </div>
+        <div id="hymnMetaRow" class="hidden grid grid-cols-2 gap-2">
+          <input id="hymnAuthor" type="text" placeholder="Author / Composer" class="px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-xs text-stone-100 placeholder-stone-500 focus:outline-none" />
+          <input id="hymnKey" type="text" placeholder="Key / Tempo (e.g. Key of G)" class="px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-xs text-stone-100 placeholder-stone-500 focus:outline-none" />
+        </div>
+        <div id="statusToggleRow" class="hidden flex items-center justify-between px-3 py-2 rounded-xl bg-stone-900 border border-stone-800">
+          <span id="statusToggleLabel" class="text-xs font-medium text-stone-300">Mark as Answered Prayer</span>
+          <input id="noteStatusCheckbox" type="checkbox" class="w-4 h-4 accent-amber-500 rounded" />
+        </div>
+      </div>
+
+      <!-- Scripture Reference Bar -->
+      <div class="p-3 rounded-2xl bg-stone-900 border border-stone-800 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-stone-200 flex items-center gap-1.5">
+            <i data-lucide="book-open-check" class="w-4 h-4 text-amber-500"></i>
+            Scripture References
+          </span>
+          <button type="button" onclick="openRefPicker()" class="px-2.5 py-1 rounded-lg bg-amber-600 text-stone-950 text-[11px] font-bold flex items-center gap-1 shadow-sm active:scale-95">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            Pick Verse
+          </button>
+        </div>
+        <div id="attachedRefsList" class="space-y-1.5"></div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-400">Study Notes & Lyrics</span>
+        <button type="button" onclick="insertCategoryTemplate()" class="text-[11px] font-medium text-amber-400 hover:underline flex items-center gap-1">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          Insert Category Outline
+        </button>
+      </div>
+
+      <textarea id="noteBody" rows="9" placeholder="Write your sermon notes, devotional thoughts, hymn lyrics, prayers, or theological reflections here..." class="w-full p-3.5 rounded-2xl bg-stone-900 border border-stone-800 text-sm leading-relaxed text-stone-100 placeholder-stone-500 focus:outline-none focus:border-amber-500 font-serif-study"></textarea>
+
+      <!-- VOICE RECORDING STUDIO -->
+      <div id="voiceSection" class="p-3.5 rounded-2xl bg-stone-900 border border-stone-800 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="mic" class="w-4 h-4 text-amber-500"></i>
+            <span class="text-xs font-semibold text-stone-200">Voice Recordings (Sermon / Prayer / Hymn)</span>
+          </div>
+          <span id="recTimer" class="hidden text-xs font-mono font-bold text-red-400 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-red-500 rec-dot"></span>
+            <span id="recTimeText">00:00</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <input id="audioLabelInput" type="text" placeholder="Clip label (e.g. Chorus Melody, Prayer)..." class="flex-1 px-3 py-2 rounded-xl bg-stone-950 border border-stone-800 text-xs text-stone-100 placeholder-stone-500 focus:outline-none" />
+          <button id="recordToggleBtn" type="button" onclick="toggleVoiceRecording()" class="px-3.5 py-2 rounded-xl bg-amber-600 text-stone-950 text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95">
+            <i data-lucide="mic" class="w-3.5 h-3.5"></i>
+            <span id="recordBtnText">Record</span>
+          </button>
+        </div>
+        <div id="editorAudioList" class="space-y-2"></div>
+      </div>
+
+      <!-- LINKS & FILE REFERENCES -->
+      <div id="attachmentsSection" class="p-3.5 rounded-2xl bg-stone-900 border border-stone-800 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="paperclip" class="w-4 h-4 text-amber-500"></i>
+            <span class="text-xs font-semibold text-stone-200">Links & Study File References</span>
+          </div>
+          <label class="cursor-pointer px-2.5 py-1 rounded-lg bg-stone-800 text-stone-200 text-[11px] font-semibold hover:bg-stone-700 flex items-center gap-1">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            <span>Attach File</span>
+            <input type="file" id="fileUploadInput" class="hidden" onchange="handleFileAttachment(event)" />
+          </label>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+          <input id="linkTitleInput" type="text" placeholder="Link Title (e.g. Commentary)" class="px-2.5 py-1.5 rounded-xl bg-stone-950 border border-stone-800 text-xs text-stone-100 placeholder-stone-500 focus:outline-none" />
+          <div class="flex gap-1.5 sm:col-span-2">
+            <input id="linkUrlInput" type="url" placeholder="https://..." class="flex-1 px-2.5 py-1.5 rounded-xl bg-stone-950 border border-stone-800 text-xs text-stone-100 placeholder-stone-500 focus:outline-none" />
+            <button type="button" onclick="addWebLink()" class="px-3 py-1.5 rounded-xl bg-amber-600 text-stone-950 text-xs font-bold shrink-0">Add Link</button>
+          </div>
+        </div>
+        <div id="editorLinksList" class="space-y-1.5"></div>
+        <div id="editorFilesList" class="space-y-1.5"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3-STEP BIBLE REFERENCE PICKER MODAL -->
+  <div id="refPickerModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs items-end justify-center">
+    <div class="w-full max-w-md bg-stone-900 rounded-t-3xl max-h-[88vh] flex flex-col shadow-2xl border-t border-stone-800">
+      <div class="px-4 py-3 border-b border-stone-800 flex items-center justify-between">
+        <div>
+          <h3 class="font-serif-study text-base font-bold text-stone-100">Pick Scripture Reference</h3>
+          <p id="pickerBreadcrumb" class="text-[11px] text-amber-400 font-medium">Select a Book</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="bibleTranslationSelect" onchange="onTranslationChange(this.value)" class="px-2 py-1 rounded-lg bg-stone-950 text-[11px] font-semibold text-stone-200 border border-stone-800">
+            <option value="web">WEB</option>
+            <option value="kjv">KJV</option>
+            <option value="bbe">BBE</option>
+          </select>
+          <button onclick="closeRefPicker()" class="p-1.5 rounded-lg text-stone-400 hover:bg-stone-800"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+      <div id="pickerStepContent" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+    </div>
+  </div>
+
+  <!-- SCRIPTURE VERSE POPUP MODAL -->
+  <div id="versePopupModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-stone-900 rounded-2xl p-4 shadow-2xl border border-stone-800 space-y-3">
+      <div class="flex items-center justify-between border-b border-stone-800 pb-2">
+        <span id="popupRefTitle" class="font-serif-study text-lg font-bold text-amber-400">Mark 1:1</span>
+        <button onclick="closeVersePopup()" class="p-1 text-stone-400"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <p id="popupVerseText" class="font-serif-study text-base leading-relaxed text-stone-200 italic">Loading verse...</p>
+    </div>
+  </div>
+
+  <!-- BACKUP & RESTORE MODAL -->
+  <div id="backupModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-stone-900 rounded-2xl p-5 shadow-2xl border border-stone-800 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-serif-study text-lg font-bold text-stone-100">Phone Storage & Backup</h3>
+        <button onclick="closeBackupModal()" class="p-1 text-stone-400"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <p class="text-xs text-stone-400 leading-relaxed">All your notes, voice recordings, hymns, and attached files are saved directly in your phone's local database (IndexedDB). Export a backup anytime.</p>
+      <div class="space-y-2.5">
+        <button onclick="exportBackupJson()" class="w-full py-2.5 px-4 rounded-xl bg-amber-600 text-stone-950 text-xs font-bold flex items-center justify-center gap-2 shadow-sm">
+          <i data-lucide="download" class="w-4 h-4"></i><span>Download Full Backup (.json)</span>
+        </button>
+        <label class="w-full py-2.5 px-4 rounded-xl bg-stone-800 text-stone-200 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer border border-stone-700">
+          <i data-lucide="upload" class="w-4 h-4"></i><span>Restore from Backup File</span>
+          <input type="file" accept=".json" class="hidden" onchange="importBackupJson(event)" />
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BIBLE_BOOKS = [
+      { name: "Genesis", testament: "OT", chapters: 50 }, { name: "Exodus", testament: "OT", chapters: 40 },
+      { name: "Leviticus", testament: "OT", chapters: 27 }, { name: "Numbers", testament: "OT", chapters: 36 },
+      { name: "Deuteronomy", testament: "OT", chapters: 34 }, { name: "Joshua", testament: "OT", chapters: 24 },
+      { name: "Judges", testament: "OT", chapters: 21 }, { name: "Ruth", testament: "OT", chapters: 4 },
+      { name: "1 Samuel", testament: "OT", chapters: 31 }, { name: "2 Samuel", testament: "OT", chapters: 24 },
+      { name: "1 Kings", testament: "OT", chapters: 22 }, { name: "2 Kings", testament: "OT", chapters: 25 },
+      { name: "1 Chronicles", testament: "OT", chapters: 29 }, { name: "2 Chronicles", testament: "OT", chapters: 36 },
+      { name: "Ezra", testament: "OT", chapters: 10 }, { name: "Nehemiah", testament: "OT", chapters: 13 },
+      { name: "Esther", testament: "OT", chapters: 10 }, { name: "Job", testament: "OT", chapters: 42 },
+      { name: "Psalms", testament: "OT", chapters: 150 }, { name: "Proverbs", testament: "OT", chapters: 31 },
+      { name: "Ecclesiastes", testament: "OT", chapters: 12 }, { name: "Song of Solomon", testament: "OT", chapters: 8 },
+      { name: "Isaiah", testament: "OT", chapters: 66 }, { name: "Jeremiah", testament: "OT", chapters: 52 },
+      { name: "Lamentations", testament: "OT", chapters: 5 }, { name: "Ezekiel", testament: "OT", chapters: 48 },
+      { name: "Daniel", testament: "OT", chapters: 12 }, { name: "Hosea", testament: "OT", chapters: 14 },
+      { name: "Joel", testament: "OT", chapters: 3 }, { name: "Amos", testament: "OT", chapters: 9 },
+      { name: "Obadiah", testament: "OT", chapters: 1 }, { name: "Jonah", testament: "OT", chapters: 4 },
+      { name: "Micah", testament: "OT", chapters: 7 }, { name: "Nahum", testament: "OT", chapters: 3 },
+      { name: "Habakkuk", testament: "OT", chapters: 3 }, { name: "Zephaniah", testament: "OT", chapters: 3 },
+      { name: "Haggai", testament: "OT", chapters: 2 }, { name: "Zechariah", testament: "OT", chapters: 14 },
+      { name: "Malachi", testament: "OT", chapters: 4 },
+      { name: "Matthew", testament: "NT", chapters: 28 }, { name: "Mark", testament: "NT", chapters: 16 },
+      { name: "Luke", testament: "NT", chapters: 24 }, { name: "John", testament: "NT", chapters: 21 },
+      { name: "Acts", testament: "NT", chapters: 28 }, { name: "Romans", testament: "NT", chapters: 16 },
+      { name: "1 Corinthians", testament: "NT", chapters: 16 }, { name: "2 Corinthians", testament: "NT", chapters: 13 },
+      { name: "Galatians", testament: "NT", chapters: 6 }, { name: "Ephesians", testament: "NT", chapters: 6 },
+      { name: "Philippians", testament: "NT", chapters: 4 }, { name: "Colossians", testament: "NT", chapters: 4 },
+      { name: "1 Thessalonians", testament: "NT", chapters: 5 }, { name: "2 Thessalonians", testament: "NT", chapters: 3 },
+      { name: "1 Timothy", testament: "NT", chapters: 6 }, { name: "2 Timothy", testament: "NT", chapters: 4 },
+      { name: "Titus", testament: "NT", chapters: 3 }, { name: "Philemon", testament: "NT", chapters: 1 },
+      { name: "Hebrews", testament: "NT", chapters: 13 }, { name: "James", testament: "NT", chapters: 5 },
+      { name: "1 Peter", testament: "NT", chapters: 5 }, { name: "2 Peter", testament: "NT", chapters: 3 },
+      { name: "1 John", testament: "NT", chapters: 5 }, { name: "2 John", testament: "NT", chapters: 1 },
+      { name: "3 John", testament: "NT", chapters: 1 }, { name: "Jude", testament: "NT", chapters: 1 },
+      { name: "Revelation", testament: "NT", chapters: 22 }
+    ];
+
+    const CATEGORIES = [
+      { id: "all", label: "All", badgeBg: "bg-stone-800 text-stone-300" },
+      { id: "sermon", label: "Sermons", badgeBg: "bg-amber-950/80 text-amber-300 border border-amber-800/50" },
+      { id: "devotional", label: "Devotionals", badgeBg: "bg-emerald-950/80 text-emerald-300 border border-emerald-800/50" },
+      { id: "prayer", label: "Prayers", badgeBg: "bg-rose-950/80 text-rose-300 border border-rose-800/50" },
+      { id: "question", label: "Questions", badgeBg: "bg-purple-950/80 text-purple-300 border border-purple-800/50" },
+      { id: "hymn", label: "Hymns", badgeBg: "bg-sky-950/80 text-sky-300 border border-sky-800/50" },
+      { id: "theology", label: "Theology", badgeBg: "bg-indigo-950/80 text-indigo-300 border border-indigo-800/50" },
+      { id: "thought", label: "Thoughts", badgeBg: "bg-stone-800 text-stone-300 border border-stone-700" }
+    ];
+
+    const TEMPLATES = {
+      sermon: "📖 Main Passage:\n\n🎯 Key Takeaway:\n\n📝 Sermon Points:\n1. \n2. \n3. \n\n🙏 Personal Application:",
+      devotional: "🌅 Scripture Observation:\n\n💡 What does this reveal about God?\n\n🚶 How will I walk this out today?\n\n🙏 Closing Prayer:",
+      prayer: "🙌 Adoration & Praise:\n\n🕊️ Confession:\n\n🌿 Thanksgiving:\n\n🙏 Supplication / Requests:",
+      question: "❓ The Question / Tension:\n\n🔍 Context & Cross-References:\n\n🏛️ Insights / Commentaries:\n\n🌱 Current Conclusion:",
+      hymn: "[Verse 1]\n\n[Refrain / Chorus]\n\n[Verse 2]\n\n[Story / Scripture Behind the Hymn]:",
+      theology: "🏛️ Doctrine / Theme:\n\n📜 Key Biblical Texts:\n\n⚖️ Core Summary:\n\n❤️ Why It Matters for Worship:",
+      thought: "💭 Quick Reflection:\n\n🔗 Connected Verse:"
+    };
+
+    const SAMPLE_NOTES = [
+      {
+        id: "sample-1", category: "sermon", title: "The Beginning of the Good News", speaker: "Pastor David", series: "Gospel of Mark",
+        body: "[Mark 1:1] \"The beginning of the Good News of Jesus Christ, the Son of God.\"\n\n🎯 Key Takeaway:\nMark wastes no time—Jesus is the promised Messiah and Son of God.",
+        refs: [{ ref: "Mark 1:1", book: "Mark", text: "The beginning of the Good News of Jesus Christ, the Son of God.", translation: "WEB" }],
+        audioClips: [], links: [], files: [], resolved: false, createdAt: Date.now() - 3600000 * 12
+      }
+    ];
+
+    let notes = [], activeTab = "feed", activeCategory = "all", activeBookFilter = null, searchQuery = "";
+    let editingNoteId = null, editorCategory = "sermon", editorRefs = [], editorAudioClips = [], editorLinks = [], editorFiles = [];
+    let mediaRecorder = null, audioChunks = [], isRecording = false;
+    let pickerStep = 1, pickerTestament = "NT", pickerBook = null, pickerChapter = 1, pickerVerseStart = 1, pickerVerseEnd = 1, pickerTranslation = "web", pickerFetchedText = "";
+
+    const DB_NAME = "DiscipleScribeLocalDB", STORE_NAME = "notes_store";
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => { const db = e.target.result; if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: "id" }); };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function loadNotesFromStorage() {
+      try {
+        const db = await openDB();
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const req = tx.objectStore(STORE_NAME).getAll();
+        req.onsuccess = async () => {
+          if (req.result && req.result.length > 0) notes = req.result.sort((a, b) => b.createdAt - a.createdAt);
+          else { const ls = localStorage.getItem("disciple_scribe_backup"); notes = ls ? JSON.parse(ls) : SAMPLE_NOTES; await persistAllNotes(); }
+          renderApp();
+        };
+      } catch (err) {
+        const ls = localStorage.getItem("disciple_scribe_backup"); notes = ls ? JSON.parse(ls) : SAMPLE_NOTES; renderApp();
+      }
+    }
+
+    async function persistAllNotes() {
+      try { localStorage.setItem("disciple_scribe_backup", JSON.stringify(notes)); } catch (e) {}
+      try {
+        const db = await openDB(); const tx = db.transaction(STORE_NAME, "readwrite"); const store = tx.objectStore(STORE_NAME);
+        store.clear(); notes.forEach((n) => store.put(n));
+      } catch (err) {}
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      ["feed", "scripture", "questions", "hymns", "prayers"].forEach((t) => {
+        const btn = document.getElementById("tab-" + t);
+        if (btn) btn.className = t === tab ? "flex flex-col items-center py-1 px-2.5 rounded-xl text-amber-500 font-semibold" : "flex flex-col items-center py-1 px-2.5 rounded-xl text-stone-400";
+      });
+      renderApp();
+    }
+
+    function setCategoryFilter(catId) { activeCategory = catId; renderApp(); }
+    function setBookFilter(bookName) { activeBookFilter = bookName; if (bookName) activeTab = "feed"; renderApp(); }
+    function newNoteForActiveBook() {
+      openEditor();
+      if (activeBookFilter) { const found = BIBLE_BOOKS.find(b => b.name === activeBookFilter); if (found) { pickerBook = found; pickerStep = 2; openRefPicker(); } }
+    }
+    function handleSearch(val) { searchQuery = val.trim().toLowerCase(); document.getElementById("clearSearchBtn").classList.toggle("hidden", !searchQuery); renderApp(); }
+    function clearSearch() { document.getElementById("searchInput").value = ""; handleSearch(""); }
+
+    function renderCategoryFilterBar() {
+      const bar = document.getElementById("categoryFilterBar");
+      if (activeTab !== "feed") { bar.classList.add("hidden"); return; }
+      bar.classList.remove("hidden");
+      bar.innerHTML = CATEGORIES.map((c) => `<button onclick="setCategoryFilter('${c.id}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition ${activeCategory === c.id ? "bg-amber-600 text-stone-950 font-bold" : "bg-stone-900 text-stone-400 border border-stone-800"}">${c.label}</button>`).join("");
+    }
+
+    function renderApp() {
+      renderCategoryFilterBar();
+      const banner = document.getElementById("bookFilterBanner");
+      if (activeBookFilter) { banner.classList.remove("hidden"); document.getElementById("activeBookName").textContent = activeBookFilter; }
+      else banner.classList.add("hidden");
+
+      const main = document.getElementById("mainContent");
+      if (activeTab === "scripture") { renderScriptureIndex(main); lucide.createIcons(); return; }
+
+      let filtered = notes.filter((n) => {
+        if (activeTab === "questions" && n.category !== "question") return false;
+        if (activeTab === "hymns" && n.category !== "hymn") return false;
+        if (activeTab === "prayers" && n.category !== "prayer") return false;
+        if (activeTab === "feed" && activeCategory !== "all" && n.category !== activeCategory) return false;
+        if (activeBookFilter && !(n.refs || []).some((r) => r.book === activeBookFilter || r.ref.startsWith(activeBookFilter))) return false;
+        if (searchQuery) {
+          const hay = [n.title, n.body, n.speaker, n.series, n.hymnAuthor, ...(n.refs || []).map(r => r.ref + " " + (r.text || ""))].join(" ").toLowerCase();
+          if (!hay.includes(searchQuery)) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        main.innerHTML = `<div class="text-center py-14 px-4 bg-stone-900 rounded-3xl border border-stone-800 my-4 space-y-3"><h3 class="font-serif-study text-lg font-bold text-stone-200">No entries found</h3><button onclick="openEditor()" class="px-4 py-2 rounded-xl bg-amber-600 text-stone-950 text-xs font-bold shadow-sm">+ Create Entry</button></div>`;
+        lucide.createIcons(); return;
+      }
+      main.innerHTML = filtered.map((note) => renderNoteCard(note)).join("");
+      lucide.createIcons();
+    }
+
+    function renderNoteCard(note) {
+      const cat = CATEGORIES.find((c) => c.id === note.category) || CATEGORIES[1];
+      const dateStr = new Date(note.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const formattedBody = escapeHtml(note.body || "").replace(/\[([^\]]+)\]/g, (m, refText) => `<button onclick="event.stopPropagation(); showVersePopup('${refText.replace(/'/g, "\\'")}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-800 text-amber-400 font-sans text-xs font-semibold hover:underline">${refText}</button>`);
+      const refsHtml = (note.refs || []).map((r) => `<div onclick="event.stopPropagation(); showVersePopup('${r.ref.replace(/'/g, "\\'")}', '${escapeHtml(r.text || "").replace(/'/g, "\\'")}')" class="p-2.5 rounded-xl bg-stone-950 border border-stone-800 cursor-pointer"><div class="flex items-center justify-between"><span class="text-xs font-bold text-amber-400">${escapeHtml(r.ref)}</span><span class="text-[10px] uppercase font-semibold text-stone-500">${escapeHtml(r.translation || "WEB")}</span></div>${r.text ? `<p class="font-serif-study text-xs text-stone-300 italic mt-1 line-clamp-2">"${escapeHtml(r.text)}"</p>` : ""}</div>`).join("");
+      const audioHtml = (note.audioClips || []).map((clip) => `<div onclick="event.stopPropagation();" class="p-2 rounded-xl bg-stone-950 border border-stone-800 flex flex-col gap-1"><span class="text-[11px] font-semibold text-stone-300">🎙️ ${escapeHtml(clip.label || "Voice Memo")}</span><audio controls src="${clip.dataUrl}" class="w-full h-8"></audio></div>`).join("");
+      return `<article onclick="openEditor(null, '${note.id}')" class="p-4 rounded-2xl bg-stone-900 border border-stone-800 shadow-xs space-y-2.5 cursor-pointer"><div class="flex items-center justify-between"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${cat.badgeBg}">${cat.label}</span><div class="flex items-center gap-2"><span class="text-[11px] text-stone-500">${dateStr}</span><button onclick="event.stopPropagation(); deleteNote('${note.id}')" class="p-1 text-stone-500 hover:text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div></div><h2 class="font-serif-study text-lg font-bold text-stone-100">${escapeHtml(note.title || "Untitled Entry")}</h2>${refsHtml ? `<div class="space-y-1.5">${refsHtml}</div>` : ""}${note.body ? `<div class="font-serif-study text-sm text-stone-300 whitespace-pre-line leading-relaxed line-clamp-5">${formattedBody}</div>` : ""}${audioHtml ? `<div class="space-y-1.5 pt-1">${audioHtml}</div>` : ""}</article>`;
+    }
+
+    function renderScriptureIndex(container) {
+      const counts = {}; notes.forEach((n) => (n.refs || []).forEach((r) => { if (r.book) counts[r.book] = (counts[r.book] || 0) + 1; }));
+      const renderGrid = (list) => list.map((b) => `<button onclick="setBookFilter('${b.name}')" class="p-2.5 rounded-xl border text-left flex items-center justify-between ${counts[b.name] ? "bg-stone-800 border-amber-700/60 text-stone-100 font-semibold" : "bg-stone-900 border-stone-800 text-stone-400"}"><span class="text-xs truncate">${b.name}</span>${counts[b.name] ? `<span class="px-1.5 py-0.5 rounded-md bg-amber-600 text-stone-950 text-[10px] font-bold">${counts[b.name]}</span>` : ""}</button>`).join("");
+      container.innerHTML = `<div class="space-y-4 pb-6"><div><h3 class="font-serif-study text-base font-bold text-stone-200 mb-2">New Testament</h3><div class="grid grid-cols-2 gap-1.5">${renderGrid(BIBLE_BOOKS.filter(b => b.testament === "NT"))}</div></div><div><h3 class="font-serif-study text-base font-bold text-stone-200 mb-2">Old Testament</h3><div class="grid grid-cols-2 gap-1.5">${renderGrid(BIBLE_BOOKS.filter(b => b.testament === "OT"))}</div></div></div>`;
+    }
+
+    function openEditor(defaultCategory = null, noteId = null) {
+      editingNoteId = noteId;
+      const modal = document.getElementById("editorModal"); modal.classList.remove("hidden"); modal.classList.add("flex");
+      if (noteId) {
+        const note = notes.find((n) => n.id === noteId);
+        if (note) {
+          editorCategory = note.category || "sermon"; document.getElementById("noteTitle").value = note.title || "";
+          document.getElementById("noteSpeaker").value = note.speaker || ""; document.getElementById("noteSeries").value = note.series || "";
+          document.getElementById("hymnAuthor").value = note.hymnAuthor || ""; document.getElementById("hymnKey").value = note.hymnKey || "";
+          document.getElementById("noteStatusCheckbox").checked = !!note.resolved; document.getElementById("noteBody").value = note.body || "";
+          editorRefs = JSON.parse(JSON.stringify(note.refs || [])); editorAudioClips = JSON.parse(JSON.stringify(note.audioClips || []));
+          editorLinks = JSON.parse(JSON.stringify(note.links || [])); editorFiles = JSON.parse(JSON.stringify(note.files || []));
+        }
+      } else {
+        editorCategory = defaultCategory || (activeCategory !== "all" ? activeCategory : "sermon");
+        ["noteTitle", "noteSpeaker", "noteSeries", "hymnAuthor", "hymnKey", "noteBody"].forEach(id => document.getElementById(id).value = "");
+        document.getElementById("noteStatusCheckbox").checked = false;
+        editorRefs = []; editorAudioClips = []; editorLinks = []; editorFiles = [];
+      }
+      renderEditorCategoryState(); renderEditorAttachments(); lucide.createIcons();
+    }
+
+    function closeEditor() { if (isRecording) stopVoiceRecording(); const modal = document.getElementById("editorModal"); modal.classList.add("hidden"); modal.classList.remove("flex"); }
+    function setEditorCategory(catId) { editorCategory = catId; renderEditorCategoryState(); }
+    function renderEditorCategoryState() {
+      document.getElementById("editorCategoryPills").innerHTML = CATEGORIES.filter(c => c.id !== "all").map((c) => `<button type="button" onclick="setEditorCategory('${c.id}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 ${editorCategory === c.id ? "bg-amber-600 text-stone-950 font-bold" : "bg-stone-900 text-stone-400 border border-stone-800"}">${c.label}</button>`).join("");
+      document.getElementById("sermonMetaRow").classList.toggle("hidden", editorCategory !== "sermon");
+      document.getElementById("hymnMetaRow").classList.toggle("hidden", editorCategory !== "hymn");
+      document.getElementById("statusToggleRow").classList.toggle("hidden", !(editorCategory === "prayer" || editorCategory === "question"));
+    }
+    function insertCategoryTemplate() { const tpl = TEMPLATES[editorCategory] || TEMPLATES.sermon; const el = document.getElementById("noteBody"); el.value = el.value ? el.value + "\n\n" + tpl : tpl; }
+
+    function renderEditorAttachments() {
+      document.getElementById("attachedRefsList").innerHTML = editorRefs.length ? editorRefs.map((r, i) => `<div class="p-2.5 rounded-xl bg-stone-950 border border-stone-800 flex items-start justify-between gap-2"><div><span class="text-xs font-bold text-amber-400">${escapeHtml(r.ref)}</span>${r.text ? `<p class="font-serif-study text-xs text-stone-300 italic">"${escapeHtml(r.text)}"</p>` : ""}</div><button type="button" onclick="editorRefs.splice(${i},1);renderEditorAttachments()" class="text-stone-400">✕</button></div>`).join("") : `<p class="text-[11px] text-stone-500">Tap "Pick Verse" to pull live Scripture text.</p>`;
+      document.getElementById("editorAudioList").innerHTML = editorAudioClips.map((c, i) => `<div class="p-2 rounded-xl bg-stone-950 border border-stone-800 space-y-1"><div class="flex justify-between text-xs font-semibold text-stone-200"><span>🎙️ ${escapeHtml(c.label)}</span><button type="button" onclick="editorAudioClips.splice(${i},1);renderEditorAttachments()" class="text-red-400">Remove</button></div><audio controls src="${c.dataUrl}" class="w-full h-8"></audio></div>`).join("");
+      document.getElementById("editorLinksList").innerHTML = editorLinks.map((l, i) => `<div class="px-3 py-1.5 rounded-xl bg-stone-950 border border-stone-800 flex justify-between text-xs"><a href="${escapeHtml(l.url)}" target="_blank" class="text-amber-400 truncate">🔗 ${escapeHtml(l.title)}</a><button type="button" onclick="editorLinks.splice(${i},1);renderEditorAttachments()">✕</button></div>`).join("");
+      document.getElementById("editorFilesList").innerHTML = editorFiles.map((f, i) => `<div class="px-3 py-1.5 rounded-xl bg-stone-950 border border-stone-800 flex justify-between text-xs text-stone-300"><span class="truncate">📎 ${escapeHtml(f.name)}</span><button type="button" onclick="editorFiles.splice(${i},1);renderEditorAttachments()">✕</button></div>`).join("");
+    }
+
+    function addWebLink() {
+      const t = document.getElementById("linkTitleInput"), u = document.getElementById("linkUrlInput");
+      let url = u.value.trim(); if (!url) return; if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      editorLinks.push({ title: t.value.trim() || url, url }); t.value = ""; u.value = ""; renderEditorAttachments();
+    }
+    function handleFileAttachment(e) {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader(); reader.onload = (ev) => { editorFiles.push({ name: file.name, type: file.type, dataUrl: ev.target.result }); renderEditorAttachments(); };
+      reader.readAsDataURL(file); e.target.value = "";
+    }
+
+    async function saveCurrentNote() {
+      const noteObj = {
+        id: editingNoteId || "note-" + Date.now(), category: editorCategory,
+        title: document.getElementById("noteTitle").value.trim() || "Untitled Entry",
+        speaker: document.getElementById("noteSpeaker").value.trim(), series: document.getElementById("noteSeries").value.trim(),
+        hymnAuthor: document.getElementById("hymnAuthor").value.trim(), hymnKey: document.getElementById("hymnKey").value.trim(),
+        resolved: document.getElementById("noteStatusCheckbox").checked, body: document.getElementById("noteBody").value,
+        refs: editorRefs, audioClips: editorAudioClips, links: editorLinks, files: editorFiles,
+        createdAt: editingNoteId ? (notes.find(n => n.id === editingNoteId)?.createdAt || Date.now()) : Date.now()
+      };
+      if (editingNoteId) notes = notes.map((n) => (n.id === editingNoteId ? noteObj : n)); else notes.unshift(noteObj);
+      await persistAllNotes(); closeEditor(); renderApp();
+    }
+
+    async function deleteNote(id) { if (!confirm("Delete this entry?")) return; notes = notes.filter((n) => n.id !== id); await persistAllNotes(); renderApp(); }
+
+    async function toggleVoiceRecording() {
+      if (isRecording) { stopVoiceRecording(); return; }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = []; mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: "audio/webm" }); const reader = new FileReader();
+          reader.onloadend = () => {
+            const inp = document.getElementById("audioLabelInput");
+            editorAudioClips.push({ label: inp.value.trim() || "Voice Memo", duration: "", dataUrl: reader.result });
+            inp.value = ""; renderEditorAttachments();
+          };
+          reader.readAsDataURL(blob); stream.getTracks().forEach(t => t.stop());
+        };
+        mediaRecorder.start(); isRecording = true;
+        document.getElementById("recordBtnText").textContent = "Stop";
+      } catch (err) { alert("Please allow microphone permissions over HTTPS."); }
+    }
+    function stopVoiceRecording() { if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop(); isRecording = false; document.getElementById("recordBtnText").textContent = "Record"; }
+
+    function openRefPicker() { pickerStep = pickerBook ? 2 : 1; const m = document.getElementById("refPickerModal"); m.classList.remove("hidden"); m.classList.add("flex"); renderPickerStep(); }
+    function closeRefPicker() { const m = document.getElementById("refPickerModal"); m.classList.add("hidden"); m.classList.remove("flex"); }
+    function onTranslationChange(val) { pickerTranslation = val; if (pickerStep === 3) fetchLiveScripturePreview(); }
+
+    function renderPickerStep() {
+      const c = document.getElementById("pickerStepContent");
+      if (pickerStep === 1) {
+        const books = BIBLE_BOOKS.filter(b => b.testament === pickerTestament);
+        c.innerHTML = `<div class="grid grid-cols-2 gap-2 p-1 bg-stone-950 rounded-xl"><button type="button" onclick="pickerTestament='NT';renderPickerStep()" class="py-1.5 rounded-lg text-xs font-bold ${pickerTestament==='NT'?'bg-amber-600 text-stone-950':'text-stone-400'}">New Testament</button><button type="button" onclick="pickerTestament='OT';renderPickerStep()" class="py-1.5 rounded-lg text-xs font-bold ${pickerTestament==='OT'?'bg-amber-600 text-stone-950':'text-stone-400'}">Old Testament</button></div><div class="grid grid-cols-2 gap-1.5 max-h-80 overflow-y-auto pt-1">${books.map(b => `<button type="button" onclick="pickerBook=BIBLE_BOOKS.find(x=>x.name==='${b.name}');pickerStep=2;renderPickerStep()" class="p-2.5 rounded-xl bg-stone-950 border border-stone-800 text-left text-xs font-semibold text-stone-200">${b.name}</button>`).join("")}</div>`;
+      } else if (pickerStep === 2) {
+        const chs = Array.from({ length: pickerBook.chapters }, (_, i) => i + 1);
+        c.innerHTML = `<button type="button" onclick="pickerStep=1;renderPickerStep()" class="text-xs text-amber-400 font-semibold">← Change Book</button><div class="grid grid-cols-5 gap-2 max-h-80 overflow-y-auto pt-1">${chs.map(ch => `<button type="button" onclick="pickerChapter=${ch};pickerVerseStart=1;pickerVerseEnd=1;pickerStep=3;renderPickerStep()" class="py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-xs font-bold text-stone-200">${ch}</button>`).join("")}</div>`;
+      } else {
+        const refLabel = pickerVerseEnd > pickerVerseStart ? `${pickerBook.name} ${pickerChapter}:${pickerVerseStart}-${pickerVerseEnd}` : `${pickerBook.name} ${pickerChapter}:${pickerVerseStart}`;
+        c.innerHTML = `<button type="button" onclick="pickerStep=2;renderPickerStep()" class="text-xs text-amber-400 font-semibold">← Change Chapter</button><div class="grid grid-cols-2 gap-2"><div><label class="text-[10px] font-bold uppercase text-stone-400">Start Verse</label><input type="number" min="1" value="${pickerVerseStart}" onchange="pickerVerseStart=Math.max(1,parseInt(this.value)||1);pickerVerseEnd=Math.max(pickerVerseStart,pickerVerseEnd);renderPickerStep()" class="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-800 text-xs font-bold text-stone-100" /></div><div><label class="text-[10px] font-bold uppercase text-stone-400">End Verse</label><input type="number" min="1" value="${pickerVerseEnd}" onchange="pickerVerseEnd=Math.max(pickerVerseStart,parseInt(this.value)||pickerVerseStart);renderPickerStep()" class="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-800 text-xs font-bold text-stone-100" /></div></div><div class="p-3 rounded-2xl bg-stone-950 border border-stone-800 space-y-1"><span class="text-xs font-bold text-amber-400">${refLabel}</span><p id="liveScripturePreviewText" class="font-serif-study text-sm italic text-stone-200">Loading verse text...</p></div><button type="button" onclick="confirmPickerSelection(true)" class="w-full py-2.5 rounded-xl bg-amber-600 text-stone-950 text-xs font-bold">+ Attach & Insert Full Verse Text</button>`;
+        fetchLiveScripturePreview();
+      }
+    }
+
+    async function fetchLiveScripturePreview() {
+      const ref = pickerVerseEnd > pickerVerseStart ? `${pickerBook.name} ${pickerChapter}:${pickerVerseStart}-${pickerVerseEnd}` : `${pickerBook.name} ${pickerChapter}:${pickerVerseStart}`;
+      const el = document.getElementById("liveScripturePreviewText"); if (!el) return;
+      try {
+        const res = await fetch(`https://bible-api.com/${encodeURIComponent(ref)}?translation=${pickerTranslation}`);
+        const data = await res.json();
+        pickerFetchedText = data && data.text ? data.text.replace(/\s+/g, " ").trim() : "";
+        el.textContent = pickerFetchedText ? `"${pickerFetchedText}"` : "Verse text unavailable.";
+      } catch (e) { pickerFetchedText = ""; el.textContent = "Offline."; }
+    }
+
+    function confirmPickerSelection(insertIntoBody) {
+      const ref = pickerVerseEnd > pickerVerseStart ? `${pickerBook.name} ${pickerChapter}:${pickerVerseStart}-${pickerVerseEnd}` : `${pickerBook.name} ${pickerChapter}:${pickerVerseStart}`;
+      editorRefs.push({ ref, book: pickerBook.name, text: pickerFetchedText, translation: pickerTranslation.toUpperCase() });
+      if (insertIntoBody) {
+        const el = document.getElementById("noteBody");
+        const snippet = pickerFetchedText ? `[${ref}] "${pickerFetchedText}"\n` : `[${ref}] `;
+        el.value = el.value ? el.value + "\n" + snippet : snippet;
+      }
+      renderEditorAttachments(); closeRefPicker();
+    }
+
+    async function showVersePopup(ref, cachedText = "") {
+      const m = document.getElementById("versePopupModal"); document.getElementById("popupRefTitle").textContent = ref;
+      const el = document.getElementById("popupVerseText"); m.classList.remove("hidden"); m.classList.add("flex");
+      if (cachedText) { el.textContent = `"${cachedText}"`; return; }
+      el.textContent = "Fetching Scripture...";
+      try { const res = await fetch(`https://bible-api.com/${encodeURIComponent(ref)}?translation=${pickerTranslation}`); const d = await res.json(); el.textContent = d.text ? `"${d.text.replace(/\s+/g, " ").trim()}"` : "Not found."; } catch (e) { el.textContent = "Offline."; }
+    }
+    function closeVersePopup() { const m = document.getElementById("versePopupModal"); m.classList.add("hidden"); m.classList.remove("flex"); }
+    function openBackupModal() { const m = document.getElementById("backupModal"); m.classList.remove("hidden"); m.classList.add("flex"); }
+    function closeBackupModal() { const m = document.getElementById("backupModal"); m.classList.add("hidden"); m.classList.remove("flex"); }
+    function exportBackupJson() { const b = new Blob([JSON.stringify(notes, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "disciple-scribe-backup.json"; a.click(); }
+    function importBackupJson(e) { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async (ev) => { try { notes = JSON.parse(ev.target.result); await persistAllNotes(); renderApp(); closeBackupModal(); } catch (err) {} }; r.readAsText(f); }
+    function escapeHtml(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    window.addEventListener("DOMContentLoaded", () => { loadNotesFromStorage(); lucide.createIcons(); });
+  </script>
+</body>
+</html>
